@@ -629,6 +629,9 @@ bool CanvasItem::is_visible() const {
 
 	return visible;
 }
+void CanvasItem::switch_visibility() {
+	set_visible(!is_visible());
+}
 
 void CanvasItem::update() {
 
@@ -1148,6 +1151,7 @@ void CanvasItem::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_visible", "visible"), &CanvasItem::set_visible);
 	ClassDB::bind_method(D_METHOD("is_visible"), &CanvasItem::is_visible);
+	ClassDB::bind_method(D_METHOD("switch_visibility"), &CanvasItem::switch_visibility);
 	ClassDB::bind_method(D_METHOD("is_visible_in_tree"), &CanvasItem::is_visible_in_tree);
 	ClassDB::bind_method(D_METHOD("show"), &CanvasItem::show);
 	ClassDB::bind_method(D_METHOD("hide"), &CanvasItem::hide);

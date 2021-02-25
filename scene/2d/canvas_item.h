@@ -288,6 +288,7 @@ public:
 
 	void set_visible(bool p_visible);
 	bool is_visible() const;
+	void switch_visibility();
 	bool is_visible_in_tree() const;
 	void show();
 	void hide();
