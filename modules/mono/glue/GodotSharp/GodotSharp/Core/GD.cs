@@ -176,6 +176,21 @@ namespace Godot
             return godot_icall_GD_str(what);
         }
 
+        public static void LogInfo(string message)
+        {
+            godot_icall_GD_log_info(message);
+        }
+
+        public static void LogWarn(string message)
+        {
+            godot_icall_GD_log_warn(message);
+        }
+
+        public static void LogError(string message)
+        {
+            godot_icall_GD_log_error(message);
+        }
+
         public static object Str2Var(string str)
         {
             return godot_icall_GD_str2var(str);
@@ -244,6 +259,15 @@ namespace Godot
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         internal extern static string godot_icall_GD_str(object[] what);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        internal extern static void godot_icall_GD_log_info(string what);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        internal extern static void godot_icall_GD_log_warn(string what);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        internal extern static void godot_icall_GD_log_error(string what);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         internal extern static object godot_icall_GD_str2var(string str);

@@ -67,6 +67,12 @@ void godot_icall_GD_seed(uint64_t p_seed);
 
 MonoString *godot_icall_GD_str(MonoArray *p_what);
 
+void godot_icall_GD_log_info(MonoString *p_str);
+
+void godot_icall_GD_log_warn(MonoString *p_str);
+
+void godot_icall_GD_log_error(MonoString *p_str);
+
 MonoObject *godot_icall_GD_str2var(MonoString *p_str);
 
 MonoBoolean godot_icall_GD_type_exists(MonoString *p_type);

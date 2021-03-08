@@ -29,7 +29,6 @@
 /*************************************************************************/
 
 #include "gd_glue.h"
-
 #ifdef MONO_GLUE_ENABLED
 
 #include "core/array.h"
@@ -224,6 +223,28 @@ MonoString *godot_icall_GD_str(MonoArray *p_what) {
 	return GDMonoMarshal::mono_string_from_godot(str);
 }
 
+void godot_icall_GD_log_info(MonoString *p_str) {
+	String str;
+
+	str = GDMonoMarshal::mono_string_to_godot(p_str);
+
+	log_info(str);
+}
+
+void godot_icall_GD_log_warn(MonoString *p_str) {
+	String str;
+
+	str = GDMonoMarshal::mono_string_to_godot(p_str);
+
+	log_warn(str);
+}
+
+void godot_icall_GD_log_error(MonoString *p_str) {
+	String str;
+	str = GDMonoMarshal::mono_string_to_godot(p_str);
+	log_error(str);
+}
+
 MonoObject *godot_icall_GD_str2var(MonoString *p_str) {
 	Variant ret;
 
@@ -300,6 +321,9 @@ void godot_register_gd_icalls() {
 	GDMonoUtils::add_internal_call("Godot.GD::godot_icall_GD_rand_seed", godot_icall_GD_rand_seed);
 	GDMonoUtils::add_internal_call("Godot.GD::godot_icall_GD_seed", godot_icall_GD_seed);
 	GDMonoUtils::add_internal_call("Godot.GD::godot_icall_GD_str", godot_icall_GD_str);
+	GDMonoUtils::add_internal_call("Godot.GD::godot_icall_GD_log_info", godot_icall_GD_log_info);
+	GDMonoUtils::add_internal_call("Godot.GD::godot_icall_GD_log_warn", godot_icall_GD_log_warn);
+	GDMonoUtils::add_internal_call("Godot.GD::godot_icall_GD_log_error", godot_icall_GD_log_error);
 	GDMonoUtils::add_internal_call("Godot.GD::godot_icall_GD_str2var", godot_icall_GD_str2var);
 	GDMonoUtils::add_internal_call("Godot.GD::godot_icall_GD_type_exists", godot_icall_GD_type_exists);
 	GDMonoUtils::add_internal_call("Godot.GD::godot_icall_GD_var2bytes", godot_icall_GD_var2bytes);
