@@ -108,6 +108,9 @@ const char *GDScriptFunctions::get_func_name(Function p_func) {
 		"char",
 		"ord",
 		"str",
+		"log_info",
+		"log_warn",
+		"log_error",
 		"print",
 		"printt",
 		"prints",
@@ -709,6 +712,30 @@ void GDScriptFunctions::call(Function p_func, const Variant **p_args, int p_arg_
 
 			r_ret = str;
 
+		} break;
+		case LOG_INFO: {
+			VALIDATE_ARG_COUNT(1);
+
+			String str = *p_args[0];
+			log_info(str);
+
+			r_ret = Variant();
+		} break;
+		case LOG_WARN: {
+			VALIDATE_ARG_COUNT(1);
+
+			String str = *p_args[0];
+			log_warn(str);
+
+			r_ret = Variant();
+		} break;
+		case LOG_ERROR: {
+			VALIDATE_ARG_COUNT(1);
+
+			String str = *p_args[0];
+			log_error(str);
+
+			r_ret = Variant();
 		} break;
 		case TEXT_PRINT: {
 
@@ -1524,6 +1551,9 @@ bool GDScriptFunctions::is_deterministic(Function p_func) {
 		case TEXT_CHAR:
 		case TEXT_ORD:
 		case TEXT_STR:
+		case LOG_INFO:
+		case LOG_WARN:
+		case LOG_ERROR:
 		case COLOR8:
 		case LEN:
 			// enable for debug only, otherwise not desirable - case GEN_RANGE:
@@ -1877,6 +1907,27 @@ MethodInfo GDScriptFunctions::get_info(Function p_func) {
 			MethodInfo mi("str");
 			mi.return_val.type = Variant::STRING;
 			mi.flags |= METHOD_FLAG_VARARG;
+			return mi;
+
+		} break;
+		case LOG_INFO: {
+
+			MethodInfo mi("log_info");
+			mi.return_val.type = Variant::NIL;
+			return mi;
+
+		} break;
+		case LOG_WARN: {
+
+			MethodInfo mi("log_warn");
+			mi.return_val.type = Variant::NIL;
+			return mi;
+
+		} break;
+		case LOG_ERROR: {
+
+			MethodInfo mi("log_error");
+			mi.return_val.type = Variant::NIL;
 			return mi;
 
 		} break;
