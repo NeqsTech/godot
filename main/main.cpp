@@ -982,7 +982,8 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	// decrease performance if this is enabled.
 	GLOBAL_DEF("application/run/flush_stdout_on_print", false);
 	GLOBAL_DEF("application/run/flush_stdout_on_print.debug", true);
-
+	GLOBAL_DEF("application/run/max_buffer_count", 0);
+	ProjectSettings::get_singleton()->set_custom_property_info("application/run/max_buffer_count", PropertyInfo(Variant::INT, "application/run/max_buffer_count", PROPERTY_HINT_RANGE, "0,20,1,or_greater"));
 	GLOBAL_DEF("logging/file_logging/enable_file_logging", false);
 	// Only file logging by default on desktop platforms as logs can't be
 	// accessed easily on mobile/Web platforms (if at all).

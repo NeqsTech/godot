@@ -183,7 +183,8 @@ void RotatedFileLogger::rotate_file() {
 RotatedFileLogger::RotatedFileLogger(const String &p_base_path, int p_max_files) :
 		base_path(p_base_path.simplify_path()),
 		max_files(p_max_files > 0 ? p_max_files : 1),
-		file(NULL) {
+		file(NULL),
+		line_counter(0) {
 	rotate_file();
 }
 
@@ -205,12 +206,12 @@ void RotatedFileLogger::logv(const char *p_format, va_list p_list, bool p_err) {
 		}
 		va_end(list_copy);
 		file->store_buffer((uint8_t *)buf, len);
-
+		line_counter++;
 		if (len >= static_buf_size) {
 			Memory::free_static(buf);
 		}
-
-		if (p_err || !ProjectSettings::get_singleton() || GLOBAL_GET("application/run/flush_stdout_on_print")) {
+		int max_buffer_count = GLOBAL_GET("application/run/max_buffer_count");
+		if (p_err || !ProjectSettings::get_singleton() || GLOBAL_GET("application/run/flush_stdout_on_print") || (max_buffer_count && line_counter > max_buffer_count)) {
 			// Don't always flush when printing stdout to avoid performance
 			// issues when `print()` is spammed in release builds.
 			file->flush();
@@ -243,6 +244,32 @@ StdLogger::~StdLogger() {}
 
 CompositeLogger::CompositeLogger(Vector<Logger *> p_loggers) :
 		loggers(p_loggers) {
+}
+
+// Makes sure that messages are logged to RotatedFileLogger only on release builds.
+// Might not be necessary if release build has only one Logger that is RotatedFileLogger.
+// TODO: check size of loggers Vector on relese builds.
+void CompositeLogger::log(const char *p_format, va_list p_list, bool p_err) {
+	if (!should_log(p_err)) {
+		return;
+	}
+
+	for (int i = 0; i < loggers.size(); ++i) {
+#ifndef DEBUG_ENABLED
+		RotatedFileLogger *rfl = dynamic_cast<RotatedFileLogger *>(loggers[i]);
+		if (!rfl) continue;
+#endif
+
+		va_list list_copy;
+		va_copy(list_copy, p_list);
+
+		loggers[i]->logv(p_format, list_copy, p_err);
+		va_end(list_copy);
+
+#ifndef DEBUG_ENABLED
+		break; // ?
+#endif
+	}
 }
 
 void CompositeLogger::logv(const char *p_format, va_list p_list, bool p_err) {

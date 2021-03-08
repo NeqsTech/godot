@@ -72,6 +72,27 @@ void remove_print_handler(PrintHandlerList *p_handler) {
 	ERR_FAIL_COND(l == NULL);
 }
 
+void log(const char *p_level_name, String p_string) {
+	if (!_print_line_enabled)
+		return;
+
+	OS::Time time = OS::get_singleton()->get_time();
+
+	OS::get_singleton()->log("[%02d:%02d:%02d %s]: %s\n", time.hour, time.min, time.sec, p_level_name, p_string.utf8().get_data());
+}
+
+void log_info(String p_string) {
+	log("INFO", p_string);
+}
+
+void log_warn(String p_string) {
+	log("WARN", p_string);
+}
+
+void log_error(String p_string) {
+	log("ERROR", p_string);
+}
+
 void print_line(String p_string) {
 
 	if (!_print_line_enabled)

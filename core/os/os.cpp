@@ -121,6 +121,16 @@ void OS::print_error(const char *p_function, const char *p_file, int p_line, con
 	_logger->log_error(p_function, p_file, p_line, p_code, p_rationale, p_type);
 }
 
+void OS::log(const char *p_format, ...) {
+
+	va_list argp;
+	va_start(argp, p_format);
+
+	_logger->log(p_format, argp, false);
+
+	va_end(argp);
+}
+
 void OS::print(const char *p_format, ...) {
 
 	va_list argp;
