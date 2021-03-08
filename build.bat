@@ -22,9 +22,10 @@ GOTO EOF
 :export
 IF "%~2" == "" GOTO debug
 IF "%2" == "debug" GOTO debug
-IF "%2" == "d" GODO debug
+IF "%2" == "d" GOTO debug
 IF "%2" == "release" GOTO release
 IF "%2" == "r" GOTO release
+GOTO EOF
 
 :fulleditor
 cmd /c "scons p=windows tools=yes module_mono_enabled=yes mono_glue=no -j%NUMBER_OF_PROCESSORS%"
@@ -34,4 +35,19 @@ cmd /c "bin\godot.windows.tools.64.mono --generate-mono-glue modules/mono/glue"
 cmd /c "scons p=windows target=release_debug tools=yes module_mono_enabled=yes -j%NUMBER_OF_PROCESSORS%"
 GOTO EOF
 
+:debug
+cmd /c "scons p=windows tools=no module_mono_enabled=yes mono_glue=no -j%NUMBER_OF_PROCESSORS%"
+
+cmd /c "bin\godot.windows.tools.64.mono --generate-mono-glue modules/mono/glue"
+
+cmd /c "scons p=windows target=debug tools=no module_mono_enabled=yes -j%NUMBER_OF_PROCESSORS%"
+
+GOTO EOF
+:release
+cmd /c "scons p=windows tools=no module_mono_enabled=yes mono_glue=no -j%NUMBER_OF_PROCESSORS%"
+
+cmd /c "bin\godot.windows.tools.64.mono --generate-mono-glue modules/mono/glue"
+
+cmd /c "scons p=windows target=release tools=no module_mono_enabled=yes -j%NUMBER_OF_PROCESSORS%"
+GOTO EOF
 :EOF
