@@ -210,8 +210,12 @@ void RotatedFileLogger::logv(const char *p_format, va_list p_list, bool p_err) {
 		if (len >= static_buf_size) {
 			Memory::free_static(buf);
 		}
+		if (!ProjectSettings::get_singleton()) {
+			return;
+		}
 		int max_buffer_count = GLOBAL_GET("application/run/max_buffer_count");
-		if (p_err || !ProjectSettings::get_singleton() || GLOBAL_GET("application/run/flush_stdout_on_print") || (max_buffer_count && line_counter > max_buffer_count)) {
+		//int max_buffer_count = 0;
+		if (p_err || GLOBAL_GET("application/run/flush_stdout_on_print") || (max_buffer_count != 0 && line_counter > max_buffer_count)) {
 			// Don't always flush when printing stdout to avoid performance
 			// issues when `print()` is spammed in release builds.
 			file->flush();

@@ -1,53 +1,78 @@
-@echo off
+@ECHO OFF
 
-IF "%~1" == ""  GOTO eof
-IF "%1" == "temp" GOTO temp
-IF "%1" == "glue" GOTO glue
-IF "%1" == "editor" GOTO editor
-IF "%1" == "export" GOTO export
-IF "%1" == "fulleditor" GOTO fulleditor
+SETLOCAL EnableDelayedExpansion
 
-:temp
-scons p=windows tools=yes module_mono_enabled=yes mono_glue=no -j%NUMBER_OF_PROCESSORS%
-GOTO EOF
+set SCONSFLAGS=-j%NUMBER_OF_PROCESSORS%
+
+IF "%~1" == "" GOTO :eof
+
+IF "%~1" == "glue" GOTO %~1
+IF "%~1" == "editor" GOTO %~1
+IF "%~1" == "fulleditor" GOTO %~1
+IF "%~1" == "debug" GOTO %~1
+IF "%~1" == "release" GOTO %~1
+IF "%~1" == "fulldebug" GOTO %~1
+IF "%~1" == "fullrelease" GOTO %~1
+
+
 
 :glue
-bin\godot.windows.tools.64.mono --generate-mono-glue modules/mono/glue
-GOTO EOF
+    CALL scons profile=temp_profile.py
+
+    IF ERRORLEVEL 0 bin\godot.windows.tools.64.mono --generate-mono-glue modules/mono/glue
+    
+    IF ERRORLEVEL 0 IF NOT "%~1" == "glue" GOTO %~1
+    
+GOTO :eof
+
 
 :editor
-scons p=windows target=release_debug tools=yes module_mono_enabled=yes -j%NUMBER_OF_PROCESSORS%
-GOTO EOF
+    CALL scons profile=editor_profile.py
 
-:export
-IF "%~2" == "" GOTO debug
-IF "%2" == "debug" GOTO debug
-IF "%2" == "d" GOTO debug
-IF "%2" == "release" GOTO release
-IF "%2" == "r" GOTO release
-GOTO EOF
+    SET dirs[0]="Authentication Server Editor\"
+    SET dirs[1]="Gateway Server Editor\"
+    SET dirs[2]="Game Server Editor\"
+    SET dirs[3]="Client Editor\"
 
-:fulleditor
-cmd /c "scons p=windows tools=yes module_mono_enabled=yes mono_glue=no -j%NUMBER_OF_PROCESSORS%"
+    CD bin\
 
-cmd /c "bin\godot.windows.tools.64.mono --generate-mono-glue modules/mono/glue"
+    FOR /L %%i IN (0,1,3) DO (
+        IF NOT EXIST !dirs[%%i]! MKDIR !dirs[%%i]!
+        XCOPY /Y "godot.windows.opt.tools.64.mono.exe" !dirs[%%i]! >NUL
+        XCOPY /S /E /Y "GodotSharp" !dirs[%%i]!GodotSharp\ >NUL
+        XCOPY /Y "mono-2.0-sgen.dll" !dirs[%%i]!\ >NUL
+        IF NOT EXIST "!dirs[%%i]!._sc_" TYPE NUL>"!dirs[%%i]!._sc_"
+    )
 
-cmd /c "scons p=windows target=release_debug tools=yes module_mono_enabled=yes -j%NUMBER_OF_PROCESSORS%"
-GOTO EOF
+    cd ..
+GOTO :eof
+
+
+:fulleditor    
+    CALL :glue editor
+
+GOTO :eof
+
 
 :debug
-cmd /c "scons p=windows tools=no module_mono_enabled=yes mono_glue=no -j%NUMBER_OF_PROCESSORS%"
+    CALL scons profile=debug_profile.py
 
-cmd /c "bin\godot.windows.tools.64.mono --generate-mono-glue modules/mono/glue"
+GOTO :eof
 
-cmd /c "scons p=windows target=debug tools=no module_mono_enabled=yes -j%NUMBER_OF_PROCESSORS%"
 
-GOTO EOF
+:fulldebug
+    CALL :glue debug
+
+GOTO :eof
+
+
 :release
-cmd /c "scons p=windows tools=no module_mono_enabled=yes mono_glue=no -j%NUMBER_OF_PROCESSORS%"
+    CALL scons profile=release_profile.py
 
-cmd /c "bin\godot.windows.tools.64.mono --generate-mono-glue modules/mono/glue"
+GOTO :eof
 
-cmd /c "scons p=windows target=release tools=no module_mono_enabled=yes -j%NUMBER_OF_PROCESSORS%"
-GOTO EOF
-:EOF
+
+:fullrelease
+    CALL :glue release
+
+GOTO :eof
