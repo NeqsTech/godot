@@ -1,6 +1,5 @@
 @ECHO OFF
 
-SETLOCAL EnableDelayedExpansion
 
 set SCONSFLAGS=-j%NUMBER_OF_PROCESSORS%
 
@@ -17,11 +16,11 @@ IF "%~1" == "fullrelease" GOTO %~1
 
 
 :glue
-    CALL scons profile=temp_profile.py
+    CMD /C "scons profile=temp_profile.py mono_glue=no"
 
-    IF ERRORLEVEL 0 bin\godot.windows.tools.64.mono --generate-mono-glue modules/mono/glue
+    CMD /C "bin\godot.windows.tools.64.mono --generate-mono-glue modules/mono/glue"
     
-    IF ERRORLEVEL 0 IF NOT "%~1" == "glue" GOTO %~1
+    IF NOT "%~1" == "glue" GOTO %~1
     
 GOTO :eof
 
@@ -29,22 +28,7 @@ GOTO :eof
 :editor
     CALL scons profile=editor_profile.py
 
-    SET dirs[0]="Authentication Server Editor\"
-    SET dirs[1]="Gateway Server Editor\"
-    SET dirs[2]="Game Server Editor\"
-    SET dirs[3]="Client Editor\"
-
-    CD bin\
-
-    FOR /L %%i IN (0,1,3) DO (
-        IF NOT EXIST !dirs[%%i]! MKDIR !dirs[%%i]!
-        XCOPY /Y "godot.windows.opt.tools.64.mono.exe" !dirs[%%i]! >NUL
-        XCOPY /S /E /Y "GodotSharp" !dirs[%%i]!GodotSharp\ >NUL
-        XCOPY /Y "mono-2.0-sgen.dll" !dirs[%%i]!\ >NUL
-        IF NOT EXIST "!dirs[%%i]!._sc_" TYPE NUL>"!dirs[%%i]!._sc_"
-    )
-
-    cd ..
+    IF NOT EXIST "bin\._sc_" TYPE NUL> "bin\._sc_"
 GOTO :eof
 
 
