@@ -29,14 +29,13 @@ GOTO :eof
 :editor
     CALL scons profile=editor_profile.py
 
-    SET dirs[0]="Authentication Server Editor\"
-    SET dirs[1]="Gateway Server Editor\"
-    SET dirs[2]="Game Server Editor\"
-    SET dirs[3]="Client Editor\"
+    SET dirs[0]="Gateway Server Editor\"
+    SET dirs[1]="Game Server Editor\"
+    SET dirs[2]="Client Editor\"
 
     CD bin\
 
-    FOR /L %%i IN (0,1,3) DO (
+    FOR /L %%i IN (0,1,2) DO (
         IF NOT EXIST !dirs[%%i]! MKDIR !dirs[%%i]!
         XCOPY /Y "godot.windows.opt.tools.64.mono.exe" !dirs[%%i]! >NUL
         XCOPY /S /E /Y "GodotSharp" !dirs[%%i]!GodotSharp\ >NUL

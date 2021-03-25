@@ -346,13 +346,15 @@ void Main::print_help(const char *p_binary) {
  */
 
 Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_phase) {
+#if defined(DEBUG_ENABLED) && !defined(NO_THREADS)
+	check_lockless_atomics();
+#endif
+
 	RID_OwnerBase::init_rid();
 
 	OS::get_singleton()->initialize_core();
 
 	engine = memnew(Engine);
-
-	ClassDB::init();
 
 	MAIN_PRINT("Main: Initialize CORE");
 
@@ -360,8 +362,6 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	register_core_driver_types();
 
 	MAIN_PRINT("Main: Initialize Globals");
-
-	Thread::_main_thread_id = Thread::get_caller_id();
 
 	globals = memnew(ProjectSettings);
 	input_map = memnew(InputMap);
@@ -980,10 +980,11 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 	// Only flush stdout in debug builds by default, as spamming `print()` will
 	// decrease performance if this is enabled.
-	GLOBAL_DEF("application/run/flush_stdout_on_print", false);
-	GLOBAL_DEF("application/run/flush_stdout_on_print.debug", true);
 	GLOBAL_DEF("application/run/max_buffer_count", 0);
 	ProjectSettings::get_singleton()->set_custom_property_info("application/run/max_buffer_count", PropertyInfo(Variant::INT, "application/run/max_buffer_count", PROPERTY_HINT_RANGE, "0,20,1,or_greater"));
+	GLOBAL_DEF_RST("application/run/flush_stdout_on_print", false);
+	GLOBAL_DEF_RST("application/run/flush_stdout_on_print.debug", true);
+
 	GLOBAL_DEF("logging/file_logging/enable_file_logging", false);
 	// Only file logging by default on desktop platforms as logs can't be
 	// accessed easily on mobile/Web platforms (if at all).
@@ -1030,6 +1031,8 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	if (quiet_stdout)
 		_print_line_enabled = false;
 
+	Logger::set_flush_stdout_on_print(ProjectSettings::get_singleton()->get("application/run/flush_stdout_on_print"));
+
 	OS::get_singleton()->set_cmdline(execpath, main_args);
 
 	GLOBAL_DEF("rendering/quality/driver/driver_name", "GLES3");
@@ -1041,7 +1044,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	GLOBAL_DEF("rendering/quality/driver/fallback_to_gles2", false);
 
 	// Assigning here, to be sure that it appears in docs
-	GLOBAL_DEF("rendering/quality/2d/use_nvidia_rect_flicker_workaround", false);
+	GLOBAL_DEF("rendering/2d/options/use_nvidia_rect_flicker_workaround", false);
 
 	GLOBAL_DEF("display/window/size/width", 1024);
 	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/width", PropertyInfo(Variant::INT, "display/window/size/width", PROPERTY_HINT_RANGE, "0,7680,or_greater")); // 8K resolution
@@ -1125,9 +1128,8 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		OS::get_singleton()->_allow_layered = false;
 	}
 
-	Engine::get_singleton()->_pixel_snap = GLOBAL_DEF("rendering/quality/2d/use_pixel_snap", false);
-	Engine::get_singleton()->_snap_2d_transforms = GLOBAL_DEF("rendering/quality/2d/use_transform_snap", false);
-	Engine::get_singleton()->_snap_2d_viewports = GLOBAL_DEF("rendering/quality/2d/use_camera_snap", false);
+	Engine::get_singleton()->_gpu_pixel_snap = GLOBAL_DEF_ALIAS("rendering/2d/snapping/use_gpu_pixel_snap", "rendering/quality/2d/use_pixel_snap", false);
+
 	OS::get_singleton()->_keep_screen_on = GLOBAL_DEF("display/window/energy_saving/keep_screen_on", true);
 	if (rtm == -1) {
 		rtm = GLOBAL_DEF("rendering/threads/thread_model", OS::RENDER_THREAD_SAFE);
@@ -1278,9 +1280,11 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	// Print engine name and version
 	print_line(String(VERSION_NAME) + " v" + get_full_version_string() + " - " + String(VERSION_WEBSITE));
 
+#if !defined(NO_THREADS)
 	if (p_main_tid_override) {
-		Thread::_main_thread_id = p_main_tid_override;
+		Thread::main_thread_id = p_main_tid_override;
 	}
+#endif
 
 	Error err = OS::get_singleton()->initialize(video_mode, video_driver_idx, audio_driver_idx);
 	if (err != OK) {
@@ -1308,7 +1312,7 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 
 	MAIN_PRINT("Main: Setup Logo");
 
-#ifdef JAVASCRIPT_ENABLED
+#if defined(JAVASCRIPT_ENABLED) || defined(ANDROID_ENABLED)
 	bool show_logo = false;
 #else
 	bool show_logo = true;
@@ -1420,6 +1424,19 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 
 	register_scene_types();
 
+#ifdef TOOLS_ENABLED
+	ClassDB::set_current_api(ClassDB::API_EDITOR);
+	EditorNode::register_editor_types();
+
+	ClassDB::set_current_api(ClassDB::API_CORE);
+
+#endif
+
+	MAIN_PRINT("Main: Load Modules, Physics, Drivers, Scripts");
+
+	register_platform_apis();
+	register_module_types();
+
 	GLOBAL_DEF("display/mouse_cursor/custom_image", String());
 	GLOBAL_DEF("display/mouse_cursor/custom_image_hotspot", Vector2());
 	GLOBAL_DEF("display/mouse_cursor/tooltip_position_offset", Point2(10, 10));
@@ -1433,18 +1450,6 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 			Input::get_singleton()->set_custom_mouse_cursor(cursor, Input::CURSOR_ARROW, hotspot);
 		}
 	}
-#ifdef TOOLS_ENABLED
-	ClassDB::set_current_api(ClassDB::API_EDITOR);
-	EditorNode::register_editor_types();
-
-	ClassDB::set_current_api(ClassDB::API_CORE);
-
-#endif
-
-	MAIN_PRINT("Main: Load Modules, Physics, Drivers, Scripts");
-
-	register_platform_apis();
-	register_module_types();
 
 	camera_server = CameraServer::create();
 
@@ -2205,9 +2210,10 @@ void Main::force_redraw() {
  * so that the engine closes cleanly without leaking memory or crashing.
  * The order matters as some of those steps are linked with each other.
  */
-void Main::cleanup() {
-
-	ERR_FAIL_COND(!_start_success);
+void Main::cleanup(bool p_force) {
+	if (!p_force) {
+		ERR_FAIL_COND(!_start_success);
+	}
 
 	if (script_debugger) {
 		// Flush any remaining messages

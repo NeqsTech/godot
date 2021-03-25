@@ -33,6 +33,7 @@
 
 #include "core/command_queue_mt.h"
 #include "core/os/thread.h"
+#include "core/safe_refcount.h"
 #include "servers/visual_server.h"
 
 class VisualServerWrapMT : public VisualServer {
@@ -46,18 +47,18 @@ class VisualServerWrapMT : public VisualServer {
 	void thread_loop();
 
 	Thread::ID server_thread;
-	volatile bool exit;
-	Thread *thread;
-	volatile bool draw_thread_up;
+	SafeFlag exit;
+	Thread thread;
+	SafeFlag draw_thread_up;
 	bool create_thread;
 
-	uint64_t draw_pending;
+	SafeNumeric<uint64_t> draw_pending;
 	void thread_draw(bool p_swap_buffers, double frame_step);
 	void thread_flush();
 
 	void thread_exit();
 
-	Mutex *alloc_mutex;
+	Mutex alloc_mutex;
 
 	int pool_max_size;
 
@@ -329,6 +330,8 @@ public:
 	FUNC1RC(int, lightmap_capture_get_octree_cell_subdiv, RID)
 	FUNC2(lightmap_capture_set_energy, RID, float)
 	FUNC1RC(float, lightmap_capture_get_energy, RID)
+	FUNC2(lightmap_capture_set_interior, RID, bool)
+	FUNC1RC(bool, lightmap_capture_is_interior, RID)
 
 	/* PARTICLES */
 
@@ -604,7 +607,7 @@ public:
 	/* RENDER INFO */
 
 	//this passes directly to avoid stalling
-	virtual int get_render_info(RenderInfo p_info) {
+	virtual uint64_t get_render_info(RenderInfo p_info) {
 		return visual_server->get_render_info(p_info);
 	}
 
