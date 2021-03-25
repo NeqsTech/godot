@@ -1548,8 +1548,6 @@ vec4 textureArray_bicubic(sampler2DArray tex, vec3 uv) {
 
 #ifdef USE_LIGHTMAP_CAPTURE
 uniform mediump vec4[12] lightmap_captures;
-uniform bool lightmap_capture_sky;
-
 #endif
 
 #ifdef USE_GI_PROBES
@@ -1964,8 +1962,9 @@ FRAGMENT_SHADER_CODE
 
 		captured /= sum;
 
-		if (lightmap_capture_sky) {
-			ambient_light = mix(ambient_light, captured.rgb, captured.a);
+		// Alpha channel is used to indicate if dynamic objects keep the environment lighting
+		if (lightmap_captures[0].a > 0.5) {
+			ambient_light += captured.rgb;
 		} else {
 			ambient_light = captured.rgb;
 		}
@@ -2159,12 +2158,13 @@ FRAGMENT_SHADER_CODE
 
 #endif //#USE_LIGHT_DIRECTIONAL
 
+#ifdef USE_VERTEX_LIGHTING
+	diffuse_light *= albedo;
+#endif
+
 #ifdef USE_FORWARD_LIGHTING
 
-#ifdef USE_VERTEX_LIGHTING
-
-	diffuse_light *= albedo;
-#else
+#ifndef USE_VERTEX_LIGHTING
 
 	for (int i = 0; i < omni_light_count; i++) {
 		light_process_omni(omni_light_indices[i], vertex, eye_vec, normal, binormal, tangent, albedo, transmission, roughness, metallic, specular, rim, rim_tint, clearcoat, clearcoat_gloss, anisotropy, specular_blob_intensity, diffuse_light, specular_light, alpha);

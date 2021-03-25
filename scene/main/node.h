@@ -188,12 +188,6 @@ private:
 
 	void _set_tree(SceneTree *p_tree);
 
-#ifdef TOOLS_ENABLED
-	friend class SceneTreeEditor;
-#endif
-	static String invalid_character;
-	static bool _validate_node_name(String &p_name);
-
 protected:
 	void _block() { data.blocked++; }
 	void _unblock() { data.blocked--; }
@@ -324,6 +318,7 @@ public:
 
 	void set_editable_instance(Node *p_node, bool p_editable);
 	bool is_editable_instance(const Node *p_node) const;
+	Node *get_deepest_editable_node(Node *start_node) const;
 
 	/* NOTIFICATIONS */
 
@@ -364,6 +359,9 @@ public:
 	Node *duplicate_and_reown(const Map<Node *, Node *> &p_reown_map) const;
 #ifdef TOOLS_ENABLED
 	Node *duplicate_from_editor(Map<const Node *, Node *> &r_duplimap) const;
+	Node *duplicate_from_editor(Map<const Node *, Node *> &r_duplimap, const Map<RES, RES> &p_resource_remap) const;
+	void remap_node_resources(Node *p_node, const Map<RES, RES> &p_resource_remap) const;
+	void remap_nested_resources(RES p_resource, const Map<RES, RES> &p_resource_remap) const;
 #endif
 
 	// used by editors, to save what has changed only

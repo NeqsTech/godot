@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  thread_uwp.cpp                                                       */
+/*  GodotHost.java                                                       */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,46 +28,30 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "thread_uwp.h"
+package org.godotengine.godot;
 
-#include "core/os/memory.h"
+import java.util.Collections;
+import java.util.List;
 
-Thread *ThreadUWP::create_func_uwp(ThreadCreateCallback p_callback, void *p_user, const Settings &) {
+/**
+ * Denotate a component (e.g: Activity, Fragment) that hosts the {@link Godot} fragment.
+ */
+public interface GodotHost {
 
-	ThreadUWP *thread = memnew(ThreadUWP);
+	/**
+	 * Provides a set of command line parameters to setup the engine.
+	 */
+	default List<String> getCommandLine() {
+		return Collections.emptyList();
+	}
 
-	std::thread new_thread(p_callback, p_user);
-	std::swap(thread->thread, new_thread);
+	/**
+	 * Invoked on the render thread when the Godot setup is complete.
+	 */
+	default void onGodotSetupCompleted() {}
 
-	return thread;
-};
-
-Thread::ID ThreadUWP::get_thread_id_func_uwp() {
-
-	return std::hash<std::thread::id>()(std::this_thread::get_id());
-};
-
-void ThreadUWP::wait_to_finish_func_uwp(Thread *p_thread) {
-
-	ThreadUWP *tp = static_cast<ThreadUWP *>(p_thread);
-	tp->thread.join();
-};
-
-Thread::ID ThreadUWP::get_id() const {
-
-	return std::hash<std::thread::id>()(thread.get_id());
-};
-
-void ThreadUWP::make_default() {
-	create_func = create_func_uwp;
-	get_thread_id_func = get_thread_id_func_uwp;
-	wait_to_finish_func = wait_to_finish_func_uwp;
-};
-
-ThreadUWP::ThreadUWP(){
-
-};
-
-ThreadUWP::~ThreadUWP(){
-
-};
+	/**
+	 * Invoked on the render thread when the Godot main loop has started.
+	 */
+	default void onGodotMainLoopStarted() {}
+}

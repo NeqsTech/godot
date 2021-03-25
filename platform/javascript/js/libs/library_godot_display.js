@@ -192,33 +192,45 @@ const GodotDisplayDragDrop = {
 				GodotDisplayDragDrop.promises = [];
 				GodotDisplayDragDrop.pending_files = [];
 				callback(drops);
-				const dirs = [DROP.substr(0, DROP.length - 1)];
-				// Remove temporary files
-				files.forEach(function (file) {
-					FS.unlink(file);
-					let dir = file.replace(DROP, '');
-					let idx = dir.lastIndexOf('/');
-					while (idx > 0) {
-						dir = dir.substr(0, idx);
-						if (dirs.indexOf(DROP + dir) === -1) {
-							dirs.push(DROP + dir);
-						}
-						idx = dir.lastIndexOf('/');
+				if (GodotConfig.persistent_drops) {
+					// Delay removal at exit.
+					GodotOS.atexit(function (resolve, reject) {
+						GodotDisplayDragDrop.remove_drop(files, DROP);
+						resolve();
+					});
+				} else {
+					GodotDisplayDragDrop.remove_drop(files, DROP);
+				}
+			});
+		},
+
+		remove_drop: function (files, drop_path) {
+			const dirs = [drop_path.substr(0, drop_path.length - 1)];
+			// Remove temporary files
+			files.forEach(function (file) {
+				FS.unlink(file);
+				let dir = file.replace(drop_path, '');
+				let idx = dir.lastIndexOf('/');
+				while (idx > 0) {
+					dir = dir.substr(0, idx);
+					if (dirs.indexOf(drop_path + dir) === -1) {
+						dirs.push(drop_path + dir);
 					}
-				});
-				// Remove dirs.
-				dirs.sort(function (a, b) {
-					const al = (a.match(/\//g) || []).length;
-					const bl = (b.match(/\//g) || []).length;
-					if (al > bl) {
-						return -1;
-					} else if (al < bl) {
-						return 1;
-					}
-					return 0;
-				}).forEach(function (dir) {
-					FS.rmdir(dir);
-				});
+					idx = dir.lastIndexOf('/');
+				}
+			});
+			// Remove dirs.
+			dirs.sort(function (a, b) {
+				const al = (a.match(/\//g) || []).length;
+				const bl = (b.match(/\//g) || []).length;
+				if (al > bl) {
+					return -1;
+				} else if (al < bl) {
+					return 1;
+				}
+				return 0;
+			}).forEach(function (dir) {
+				FS.rmdir(dir);
 			});
 		},
 
@@ -230,6 +242,105 @@ const GodotDisplayDragDrop = {
 	},
 };
 mergeInto(LibraryManager.library, GodotDisplayDragDrop);
+
+const GodotDisplayVK = {
+
+	$GodotDisplayVK__deps: ['$GodotRuntime', '$GodotConfig', '$GodotDisplayListeners'],
+	$GodotDisplayVK__postset: 'GodotOS.atexit(function(resolve, reject) { GodotDisplayVK.clear(); resolve(); });',
+	$GodotDisplayVK: {
+		textinput: null,
+		textarea: null,
+
+		available: function () {
+			return GodotConfig.virtual_keyboard && 'ontouchstart' in window;
+		},
+
+		init: function (input_cb) {
+			function create(what) {
+				const elem = document.createElement(what);
+				elem.style.display = 'none';
+				elem.style.position = 'absolute';
+				elem.style.zIndex = '-1';
+				elem.style.background = 'transparent';
+				elem.style.padding = '0px';
+				elem.style.margin = '0px';
+				elem.style.overflow = 'hidden';
+				elem.style.width = '0px';
+				elem.style.height = '0px';
+				elem.style.border = '0px';
+				elem.style.outline = 'none';
+				elem.readonly = true;
+				elem.disabled = true;
+				GodotDisplayListeners.add(elem, 'input', function (evt) {
+					const c_str = GodotRuntime.allocString(elem.value);
+					input_cb(c_str, elem.selectionEnd);
+					GodotRuntime.free(c_str);
+				}, false);
+				GodotDisplayListeners.add(elem, 'blur', function (evt) {
+					elem.style.display = 'none';
+					elem.readonly = true;
+					elem.disabled = true;
+				}, false);
+				GodotConfig.canvas.insertAdjacentElement('beforebegin', elem);
+				return elem;
+			}
+			GodotDisplayVK.textinput = create('input');
+			GodotDisplayVK.textarea = create('textarea');
+			GodotDisplayVK.updateSize();
+		},
+		show: function (text, multiline, start, end) {
+			if (!GodotDisplayVK.textinput || !GodotDisplayVK.textarea) {
+				return;
+			}
+			if (GodotDisplayVK.textinput.style.display !== '' || GodotDisplayVK.textarea.style.display !== '') {
+				GodotDisplayVK.hide();
+			}
+			GodotDisplayVK.updateSize();
+			const elem = multiline ? GodotDisplayVK.textarea : GodotDisplayVK.textinput;
+			elem.readonly = false;
+			elem.disabled = false;
+			elem.value = text;
+			elem.style.display = 'block';
+			elem.focus();
+			elem.setSelectionRange(start, end);
+		},
+		hide: function () {
+			if (!GodotDisplayVK.textinput || !GodotDisplayVK.textarea) {
+				return;
+			}
+			[GodotDisplayVK.textinput, GodotDisplayVK.textarea].forEach(function (elem) {
+				elem.blur();
+				elem.style.display = 'none';
+				elem.value = '';
+			});
+		},
+		updateSize: function () {
+			if (!GodotDisplayVK.textinput || !GodotDisplayVK.textarea) {
+				return;
+			}
+			const rect = GodotConfig.canvas.getBoundingClientRect();
+			function update(elem) {
+				elem.style.left = `${rect.left}px`;
+				elem.style.top = `${rect.top}px`;
+				elem.style.width = `${rect.width}px`;
+				elem.style.height = `${rect.height}px`;
+			}
+			update(GodotDisplayVK.textinput);
+			update(GodotDisplayVK.textarea);
+		},
+		clear: function () {
+			if (GodotDisplayVK.textinput) {
+				GodotDisplayVK.textinput.remove();
+				GodotDisplayVK.textinput = null;
+			}
+			if (GodotDisplayVK.textarea) {
+				GodotDisplayVK.textarea.remove();
+				GodotDisplayVK.textarea = null;
+			}
+		},
+	},
+};
+mergeInto(LibraryManager.library, GodotDisplayVK);
 
 /*
  * Display server cursor helper.
@@ -396,13 +507,122 @@ const GodotDisplayGamepads = {
 };
 mergeInto(LibraryManager.library, GodotDisplayGamepads);
 
+const GodotDisplayScreen = {
+	$GodotDisplayScreen__deps: ['$GodotConfig', '$GodotOS', '$GL', 'emscripten_webgl_get_current_context'],
+	$GodotDisplayScreen: {
+		desired_size: [0, 0],
+		hidpi: true,
+		getPixelRatio: function () {
+			return GodotDisplayScreen.hidpi ? window.devicePixelRatio || 1 : 1;
+		},
+		isFullscreen: function () {
+			const elem = document.fullscreenElement || document.mozFullscreenElement
+				|| document.webkitFullscreenElement || document.msFullscreenElement;
+			if (elem) {
+				return elem === GodotConfig.canvas;
+			}
+			// But maybe knowing the element is not supported.
+			return document.fullscreen || document.mozFullScreen
+				|| document.webkitIsFullscreen;
+		},
+		hasFullscreen: function () {
+			return document.fullscreenEnabled || document.mozFullScreenEnabled
+				|| document.webkitFullscreenEnabled;
+		},
+		requestFullscreen: function () {
+			if (!GodotDisplayScreen.hasFullscreen()) {
+				return 1;
+			}
+			const canvas = GodotConfig.canvas;
+			try {
+				const promise = (canvas.requestFullscreen || canvas.msRequestFullscreen
+					|| canvas.mozRequestFullScreen || canvas.mozRequestFullscreen
+					|| canvas.webkitRequestFullscreen
+				).call(canvas);
+				// Some browsers (Safari) return undefined.
+				// For the standard ones, we need to catch it.
+				if (promise) {
+					promise.catch(function () {
+						// nothing to do.
+					});
+				}
+			} catch (e) {
+				return 1;
+			}
+			return 0;
+		},
+		exitFullscreen: function () {
+			if (!GodotDisplayScreen.isFullscreen()) {
+				return 0;
+			}
+			try {
+				const promise = document.exitFullscreen();
+				if (promise) {
+					promise.catch(function () {
+						// nothing to do.
+					});
+				}
+			} catch (e) {
+				return 1;
+			}
+			return 0;
+		},
+		_updateGL: function () {
+			const gl_context_handle = _emscripten_webgl_get_current_context(); // eslint-disable-line no-undef
+			const gl = GL.getContext(gl_context_handle);
+			if (gl) {
+				GL.resizeOffscreenFramebuffer(gl);
+			}
+		},
+		updateSize: function () {
+			const isFullscreen = GodotDisplayScreen.isFullscreen();
+			const wantsFullWindow = GodotConfig.canvas_resize_policy === 2;
+			const noResize = GodotConfig.canvas_resize_policy === 0;
+			const wwidth = GodotDisplayScreen.desired_size[0];
+			const wheight = GodotDisplayScreen.desired_size[1];
+			const canvas = GodotConfig.canvas;
+			let width = wwidth;
+			let height = wheight;
+			if (noResize) {
+				// Don't resize canvas, just update GL if needed.
+				if (canvas.width !== width || canvas.height !== height) {
+					GodotDisplayScreen.desired_size = [canvas.width, canvas.height];
+					GodotDisplayScreen._updateGL();
+					return 1;
+				}
+				return 0;
+			}
+			const scale = GodotDisplayScreen.getPixelRatio();
+			if (isFullscreen || wantsFullWindow) {
+				// We need to match screen size.
+				width = window.innerWidth * scale;
+				height = window.innerHeight * scale;
+			}
+			const csw = `${width / scale}px`;
+			const csh = `${height / scale}px`;
+			if (canvas.style.width !== csw || canvas.style.height !== csh || canvas.width !== width || canvas.height !== height) {
+				// Size doesn't match.
+				// Resize canvas, set correct CSS pixel size, update GL.
+				canvas.width = width;
+				canvas.height = height;
+				canvas.style.width = csw;
+				canvas.style.height = csh;
+				GodotDisplayScreen._updateGL();
+				return 1;
+			}
+			return 0;
+		},
+	},
+};
+mergeInto(LibraryManager.library, GodotDisplayScreen);
+
 /**
  * Display server interface.
  *
  * Exposes all the functions needed by DisplayServer implementation.
  */
 const GodotDisplay = {
-	$GodotDisplay__deps: ['$GodotConfig', '$GodotRuntime', '$GodotDisplayCursor', '$GodotDisplayListeners', '$GodotDisplayDragDrop', '$GodotDisplayGamepads'],
+	$GodotDisplay__deps: ['$GodotConfig', '$GodotRuntime', '$GodotDisplayCursor', '$GodotDisplayListeners', '$GodotDisplayDragDrop', '$GodotDisplayGamepads', '$GodotDisplayScreen', '$GodotDisplayVK'],
 	$GodotDisplay: {
 		window_icon: '',
 		findDPI: function () {
@@ -450,7 +670,53 @@ const GodotDisplay = {
 
 	godot_js_display_pixel_ratio_get__sig: 'f',
 	godot_js_display_pixel_ratio_get: function () {
-		return window.devicePixelRatio || 1;
+		return GodotDisplayScreen.getPixelRatio();
+	},
+
+	godot_js_display_fullscreen_request__sig: 'i',
+	godot_js_display_fullscreen_request: function () {
+		return GodotDisplayScreen.requestFullscreen();
+	},
+
+	godot_js_display_fullscreen_exit__sig: 'i',
+	godot_js_display_fullscreen_exit: function () {
+		return GodotDisplayScreen.exitFullscreen();
+	},
+
+	godot_js_display_desired_size_set__sig: 'v',
+	godot_js_display_desired_size_set: function (width, height) {
+		GodotDisplayScreen.desired_size = [width, height];
+		GodotDisplayScreen.updateSize();
+	},
+
+	godot_js_display_size_update__sig: 'i',
+	godot_js_display_size_update: function () {
+		const updated = GodotDisplayScreen.updateSize();
+		if (updated) {
+			GodotDisplayVK.updateSize();
+		}
+		return updated;
+	},
+
+	godot_js_display_screen_size_get__sig: 'vii',
+	godot_js_display_screen_size_get: function (width, height) {
+		const scale = GodotDisplayScreen.getPixelRatio();
+		GodotRuntime.setHeapValue(width, window.screen.width * scale, 'i32');
+		GodotRuntime.setHeapValue(height, window.screen.height * scale, 'i32');
+	},
+
+	godot_js_display_window_size_get: function (p_width, p_height) {
+		GodotRuntime.setHeapValue(p_width, GodotConfig.canvas.width, 'i32');
+		GodotRuntime.setHeapValue(p_height, GodotConfig.canvas.height, 'i32');
+	},
+
+	godot_js_display_compute_position: function (x, y, r_x, r_y) {
+		const canvas = GodotConfig.canvas;
+		const rect = canvas.getBoundingClientRect();
+		const rw = canvas.width / rect.width;
+		const rh = canvas.height / rect.height;
+		GodotRuntime.setHeapValue(r_x, (x - rect.x) * rw, 'i32');
+		GodotRuntime.setHeapValue(r_y, (y - rect.y) * rh, 'i32');
 	},
 
 	/*
@@ -464,13 +730,6 @@ const GodotDisplay = {
 	godot_js_display_canvas_is_focused__sig: 'i',
 	godot_js_display_canvas_is_focused: function () {
 		return document.activeElement === GodotConfig.canvas;
-	},
-
-	godot_js_display_canvas_bounding_rect_position_get__sig: 'vii',
-	godot_js_display_canvas_bounding_rect_position_get: function (r_x, r_y) {
-		const brect = GodotConfig.canvas.getBoundingClientRect();
-		GodotRuntime.setHeapValue(r_x, brect.x, 'i32');
-		GodotRuntime.setHeapValue(r_y, brect.y, 'i32');
 	},
 
 	/*
@@ -516,15 +775,6 @@ const GodotDisplay = {
 	/*
 	 * Window
 	 */
-	godot_js_display_window_request_fullscreen__sig: 'v',
-	godot_js_display_window_request_fullscreen: function () {
-		const canvas = GodotConfig.canvas;
-		(canvas.requestFullscreen || canvas.msRequestFullscreen
-			|| canvas.mozRequestFullScreen || canvas.mozRequestFullscreen
-			|| canvas.webkitRequestFullscreen
-		).call(canvas);
-	},
-
 	godot_js_display_window_title_set__sig: 'vi',
 	godot_js_display_window_title_set: function (p_data) {
 		document.title = GodotRuntime.parseString(p_data);
@@ -540,7 +790,7 @@ const GodotDisplay = {
 			document.head.appendChild(link);
 		}
 		const old_icon = GodotDisplay.window_icon;
-		const png = new Blob([GodotRuntime.heapCopy(HEAPU8, p_ptr, p_len)], { type: 'image/png' });
+		const png = new Blob([GodotRuntime.heapSlice(HEAPU8, p_ptr, p_len)], { type: 'image/png' });
 		GodotDisplay.window_icon = URL.createObjectURL(png);
 		link.href = GodotDisplay.window_icon;
 		if (old_icon) {
@@ -580,7 +830,7 @@ const GodotDisplay = {
 		const shape = GodotRuntime.parseString(p_shape);
 		const old_shape = GodotDisplayCursor.cursors[shape];
 		if (p_len > 0) {
-			const png = new Blob([GodotRuntime.heapCopy(HEAPU8, p_ptr, p_len)], { type: 'image/png' });
+			const png = new Blob([GodotRuntime.heapSlice(HEAPU8, p_ptr, p_len)], { type: 'image/png' });
 			const url = URL.createObjectURL(png);
 			GodotDisplayCursor.cursors[shape] = {
 				url: url,
@@ -645,8 +895,8 @@ const GodotDisplay = {
 		GodotDisplayListeners.add(canvas, 'drop', GodotDisplayDragDrop.handler(dropFiles));
 	},
 
-	godot_js_display_setup_canvas__sig: 'v',
-	godot_js_display_setup_canvas: function () {
+	godot_js_display_setup_canvas__sig: 'viiii',
+	godot_js_display_setup_canvas: function (p_width, p_height, p_fullscreen, p_hidpi) {
 		const canvas = GodotConfig.canvas;
 		GodotDisplayListeners.add(canvas, 'contextmenu', function (ev) {
 			ev.preventDefault();
@@ -655,6 +905,54 @@ const GodotDisplay = {
 			alert('WebGL context lost, please reload the page'); // eslint-disable-line no-alert
 			ev.preventDefault();
 		}, false);
+		GodotDisplayScreen.hidpi = !!p_hidpi;
+		switch (GodotConfig.canvas_resize_policy) {
+		case 0: // None
+			GodotDisplayScreen.desired_size = [canvas.width, canvas.height];
+			break;
+		case 1: // Project
+			GodotDisplayScreen.desired_size = [p_width, p_height];
+			break;
+		default: // Full window
+			// Ensure we display in the right place, the size will be handled by updateSize
+			canvas.style.position = 'absolute';
+			canvas.style.top = 0;
+			canvas.style.left = 0;
+			break;
+		}
+		GodotDisplayScreen.updateSize();
+		if (p_fullscreen) {
+			GodotDisplayScreen.requestFullscreen();
+		}
+	},
+
+	/*
+	 * Virtual Keyboard
+	 */
+	godot_js_display_vk_show__sig: 'viiii',
+	godot_js_display_vk_show: function (p_text, p_multiline, p_start, p_end) {
+		const text = GodotRuntime.parseString(p_text);
+		const start = p_start > 0 ? p_start : 0;
+		const end = p_end > 0 ? p_end : start;
+		GodotDisplayVK.show(text, p_multiline, start, end);
+	},
+
+	godot_js_display_vk_hide__sig: 'v',
+	godot_js_display_vk_hide: function () {
+		GodotDisplayVK.hide();
+	},
+
+	godot_js_display_vk_available__sig: 'i',
+	godot_js_display_vk_available: function () {
+		return GodotDisplayVK.available();
+	},
+
+	godot_js_display_vk_cb__sig: 'vi',
+	godot_js_display_vk_cb: function (p_input_cb) {
+		const input_cb = GodotRuntime.get_func(p_input_cb);
+		if (GodotDisplayVK.available()) {
+			GodotDisplayVK.init(input_cb);
+		}
 	},
 
 	/*

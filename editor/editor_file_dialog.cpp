@@ -1105,9 +1105,9 @@ EditorFileDialog::Access EditorFileDialog::get_access() const {
 
 void EditorFileDialog::_make_dir_confirm() {
 
-	Error err = dir_access->make_dir(makedirname->get_text());
+	Error err = dir_access->make_dir(makedirname->get_text().strip_edges());
 	if (err == OK) {
-		dir_access->change_dir(makedirname->get_text());
+		dir_access->change_dir(makedirname->get_text().strip_edges());
 		invalidate();
 		update_filters();
 		update_dir();
@@ -1184,7 +1184,6 @@ void EditorFileDialog::_update_drives() {
 void EditorFileDialog::_favorite_selected(int p_idx) {
 
 	dir_access->change_dir(favorites->get_item_metadata(p_idx));
-	file->set_text("");
 	update_dir();
 	invalidate();
 	_push_history();

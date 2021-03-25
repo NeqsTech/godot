@@ -1277,7 +1277,12 @@ bool RasterizerCanvasGLES2::try_join_item(Item *p_ci, RenderItemState &r_ris, bo
 	r_batch_break = false;
 	bool join = true;
 
-	// light_masked may possibly need state checking here. Check for regressions!
+	// light_masked objects we just don't currently support for joining
+	// (this could possibly be improved at a later date)
+	if (p_ci->light_masked) {
+		join = false;
+		r_batch_break = true;
+	}
 
 	// we will now allow joining even if final modulate is different
 	// we will instead bake the final modulate into the vertex colors
@@ -1937,12 +1942,9 @@ void RasterizerCanvasGLES2::render_joined_item(const BItemJoined &p_bij, RenderI
 
 	storage->info.render._2d_item_count++;
 
-#ifdef DEBUG_ENABLED
+#if defined(TOOLS_ENABLED) && defined(DEBUG_ENABLED)
 	if (bdata.diagnose_frame) {
-		bdata.frame_string += "\tjoined_item " + itos(p_bij.num_item_refs) + " refs\n";
-		if (p_bij.z_index != 0) {
-			bdata.frame_string += "\t\t(z " + itos(p_bij.z_index) + ")\n";
-		}
+		bdata.frame_string += _diagnose_make_item_joined_string(p_bij);
 	}
 #endif
 
