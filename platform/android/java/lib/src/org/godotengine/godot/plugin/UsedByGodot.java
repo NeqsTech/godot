@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  thread_windows.h                                                     */
+/*  UsedByGodot.java                                                     */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,41 +28,18 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef THREAD_WINDOWS_H
-#define THREAD_WINDOWS_H
+package org.godotengine.godot.plugin;
 
-#ifdef WINDOWS_ENABLED
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-#include "core/os/thread.h"
-#include "core/script_language.h"
-
-#include <windows.h>
-
-class ThreadWindows : public Thread {
-
-	ThreadCreateCallback callback;
-	void *user;
-	ID id;
-	HANDLE handle;
-
-	static Thread *create_thread_windows();
-
-	static DWORD WINAPI thread_callback(LPVOID userdata);
-
-	static Thread *create_func_windows(ThreadCreateCallback p_callback, void *, const Settings &);
-	static ID get_thread_id_func_windows();
-	static void wait_to_finish_func_windows(Thread *p_thread);
-
-	ThreadWindows();
-
-public:
-	virtual ID get_id() const;
-
-	static void make_default();
-
-	~ThreadWindows();
-};
-
-#endif
-
-#endif
+/**
+ * Annotation to indicate a method is being invoked from the Godot game logic.
+ *
+ * At runtime, annotated plugin methods are detected and automatically registered.
+ */
+@Target({ ElementType.METHOD })
+@Retention(RetentionPolicy.RUNTIME)
+public @interface UsedByGodot {}

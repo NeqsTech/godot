@@ -371,6 +371,10 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	_initial_set("interface/editor/save_each_scene_on_quit", true); // Regression
 	_initial_set("interface/editor/quit_confirmation", true);
 
+	// Inspector
+	_initial_set("interface/inspector/max_array_dictionary_items_per_page", 20);
+	hints["interface/inspector/max_array_dictionary_items_per_page"] = PropertyInfo(Variant::INT, "interface/inspector/max_array_dictionary_items_per_page", PROPERTY_HINT_RANGE, "10,100,1", PROPERTY_USAGE_DEFAULT);
+
 	// Theme
 	_initial_set("interface/theme/preset", "Default");
 	hints["interface/theme/preset"] = PropertyInfo(Variant::STRING, "interface/theme/preset", PROPERTY_HINT_ENUM, "Default,Alien,Arc,Godot 2,Grey,Light,Solarized (Dark),Solarized (Light),Custom", PROPERTY_USAGE_DEFAULT);
@@ -432,6 +436,8 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 
 	// Property editor
 	_initial_set("docks/property_editor/auto_refresh_interval", 0.3);
+	_initial_set("docks/property_editor/subresource_hue_tint", 0.75);
+	hints["docks/property_editor/subresource_hue_tint"] = PropertyInfo(Variant::REAL, "docks/property_editor/subresource_hue_tint", PROPERTY_HINT_RANGE, "0,1,0.01", PROPERTY_USAGE_DEFAULT);
 
 	/* Text editor */
 
