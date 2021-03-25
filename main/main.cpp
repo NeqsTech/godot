@@ -980,8 +980,11 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 	// Only flush stdout in debug builds by default, as spamming `print()` will
 	// decrease performance if this is enabled.
+<<<<<<< HEAD
 	GLOBAL_DEF("application/run/max_buffer_count", 0);
 	ProjectSettings::get_singleton()->set_custom_property_info("application/run/max_buffer_count", PropertyInfo(Variant::INT, "application/run/max_buffer_count", PROPERTY_HINT_RANGE, "0,20,1,or_greater"));
+=======
+>>>>>>> 94a0fc47f7b4e90f8973f9adbfd3312579ed2825
 	GLOBAL_DEF_RST("application/run/flush_stdout_on_print", false);
 	GLOBAL_DEF_RST("application/run/flush_stdout_on_print.debug", true);
 
